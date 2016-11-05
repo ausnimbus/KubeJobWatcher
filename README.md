@@ -26,3 +26,5 @@ kubectl create -f yourdeployment.yaml
 ## Config options
 
 To print job logs edit main.go and change the constant `printLogs` to `true`
+
+test
