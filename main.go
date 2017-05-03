@@ -13,9 +13,9 @@ import (
 
 const (
 	tokenPath         = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-	pollInterval      = 10 // in seconds
-	succeedThreshhold = 1  // number of successes before cleanup
-	failThreshhold    = 1  // number of fails before cleanup
+	pollInterval      = 900 // in seconds
+	succeedThreshhold = 1 // number of successes before cleanup
+	failThreshhold    = 3  // number of fails before cleanup
 	printLogs         = false
 )
 
@@ -197,10 +197,18 @@ func deleteJob(jobName string, namespace string) error {
 	return nil
 }
 
+func getenv(key, fallback string) string {
+    value := os.Getenv(key)
+    if len(value) == 0 {
+        return fallback
+    }
+    return value
+}
+
 func main() {
 
-	kubeHost := os.Getenv("KUBERNETES_SERVICE_HOST")
-	kubePort := os.Getenv("KUBERNETES_SERVICE_PORT")
+	kubeHost := getenv("KUBERNETES_SERVICE_HOST", "kubernetes.default.svc.cluster.local")
+	kubePort := getenv("KUBERNETES_SERVICE_PORT", "443")
 	if kubeHost == "" || kubePort == "" {
 		log.Fatalln("KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT must be set.")
 	}
@@ -231,6 +239,10 @@ func main() {
 				v.Status.Failed,
 				v.Status.Active,
 			)
+
+			if st, _ := time.Parse("2006-01-02T15:04:05Z", v.Status.StartTime);time.Now().UTC().Sub(st.Add(2 * time.Hour)) < 0 {
+				continue
+			}
 
 			var cleanup bool
 			switch {
